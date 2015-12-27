@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -48,6 +47,8 @@ public class FindAutomatic extends Activity{
             }
         });
 
+
+
     }
 
     public void getLocation(){
@@ -58,34 +59,69 @@ public class FindAutomatic extends Activity{
             double lat = gps.getLatitude();
             double lng = gps.getLongitude();
             locationText = (TextView) findViewById(R.id.locationText);
-            locationText.setText("Anda berada di...\nlat: "+lat+"\nlong: "+lng);
+            locationText.setText("Anda berada di...\nlat: " + lat + "\nlong: " + lng);
 
             PlacesFetcher place = new PlacesFetcher();
-            place.execute(location);
             Toast.makeText(getApplicationContext(), "Mencari pertolongan terdekat...", Toast.LENGTH_SHORT).show();
+
+            String type = "police";
+            place.execute(location, type);
+
+//            policeButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    String type = "police";
+//                    new PlacesFetcher().execute(location, type);
+//                }
+//            });
+//
+//            hospitalButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    String type = "hospital";
+//                    new PlacesFetcher().execute(location, type);
+//                }
+//            });
+//
+//            fireStationButton.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    String type = "fire_station";
+//                    new PlacesFetcher().execute(location, type);
+//                }
+//            });
+
         }else{
             gps.showSettingsAlert();
         }
     }
 
-    private class PlacesFetcher extends AsyncTask<Location, Integer, String> {
+    private class PlacesFetcher extends AsyncTask<Object, Integer, String> {
         @Override
-        protected String doInBackground(Location... params) {
+        protected String doInBackground(Object... params) {
             StringBuffer bufferPlaces = null;
-            Location location = params[0];
+            Location location = (Location) params[0];
+            String type = (String) params[1];
             double lat = location.getLatitude();
             double lng = location.getLongitude();
 
             String apiKey = "AIzaSyDhoQvCmrgH-tkN0LNbiQZqPs-zoZzz1hM";
 
-            String types ="hospital";
             int radius = 1000;
 
+            String [] types = {"police", "hospital", "fire_station"};
             //LOCATION ON GOOGLE WEB SERVICE IS LAT/LONG, PLEASE NOTICE
             //DO NOT REPEAT THE SAME MISTAKE
 
+            String[] allResult=new String[types.length];
+
+
+            for(int a=0; a<types.length; a++){
+
+            type = types[a];
+
             String urlSearchPlaces ="https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
-                    "location="+lat+","+lng+"&radius="+radius+"&types="+types+"&key="+apiKey;
+                    "location="+lat+","+lng+"&radius="+radius+"&types="+type+"&key="+apiKey;
 
             try {
                 URL urlPlaces = new URL(urlSearchPlaces);
@@ -117,8 +153,9 @@ public class FindAutomatic extends Activity{
                     JSONObject place = arrayPlaces.getJSONObject(i);
                     String placeName = place.getString("name");
                     String placeId = place.getString("place_id");
+                    String placeDetails = getPlaceDetails(placeId);
 
-                    newBuffer.append((i+1)+". "+placeName+"\n");
+                    newBuffer.append((i+1)+". "+placeName+placeDetails+"\n");
                 }
 
             } catch (JSONException e) {
@@ -126,17 +163,66 @@ public class FindAutomatic extends Activity{
             }
 
             resultPlaces = newBuffer.toString();
-            return resultPlaces;
+            allResult[a] = resultPlaces;
+            }
+
+            return allResult[1];
         }
 
         @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-
+        protected void onPostExecute(String sResult) {
+            super.onPostExecute(sResult);
 
             TextView resultText = (TextView) findViewById(R.id.resultText);
+//            for(int b=0; b<sResult.length; b++){
+//                resultText.setText("Daftar lokasi terdekat:\n"+sResult[b]);
+//            }
+            resultText.setText("Daftar lokasi terdekat:\n"+sResult);
+        }
 
-            resultText.setText("Daftar lokasi terdekat:\n"+s);
+        private String getPlaceDetails(String placeId){
+            StringBuffer bufferDetails = null;
+            String id = placeId;
+            String apiKey = "AIzaSyDhoQvCmrgH-tkN0LNbiQZqPs-zoZzz1hM";
+            String urlSearchDetails="https://maps.googleapis.com/maps/api/place/details/json?placeid="+id+"&key="+apiKey;;
+
+
+            try {
+                URL urlDetails = new URL(urlSearchDetails);
+                HttpURLConnection connection = (HttpURLConnection) urlDetails.openConnection();
+                InputStream inputStream = connection.getInputStream();
+                BufferedReader readerDetails = new BufferedReader(new InputStreamReader(inputStream));
+                bufferDetails = new StringBuffer();
+                String lineDetails="";
+
+                while((lineDetails=readerDetails.readLine())!=null){
+                    bufferDetails.append(lineDetails);
+                }
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            String details = bufferDetails.toString();
+
+            StringBuffer finalResult = new StringBuffer();
+
+            try {
+                JSONObject objectDetails = new JSONObject(details);
+                JSONObject objectResult = (JSONObject) objectDetails.get("result");
+
+                String address = (String) objectResult.get("formatted_address");
+                String phone = (String) objectResult.get("international_phone_number");
+
+
+                finalResult.append(": "+address+" "+phone);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            return finalResult.toString();
         }
     }
 
