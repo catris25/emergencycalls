@@ -27,6 +27,10 @@ public class FindAutomatic extends Activity{
     Button policeButton;
     Button fireStationButton;
     Button hospitalButton;
+    TextView resultText;
+
+    String [] stringFromAsync;
+    String [] types = {"police", "hospital", "fire_station"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,11 +43,47 @@ public class FindAutomatic extends Activity{
         fireStationButton = (Button) findViewById(R.id.fireStationButton);
         hospitalButton = (Button) findViewById(R.id.hospitalButton);
 
+        resultText = (TextView) findViewById(R.id.resultText);
+
         refreshButton = (Button) findViewById(R.id.refreshButton);
         refreshButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 getLocation();
+            }
+        });
+
+
+        policeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(stringFromAsync!=null){
+                    resultText.setText(stringFromAsync[0]);
+                }else{
+                    Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        hospitalButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(stringFromAsync!=null){
+                    resultText.setText(stringFromAsync[1]);
+                }else{
+                    Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        fireStationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(stringFromAsync!=null){
+                    resultText.setText(stringFromAsync[2]);
+                }else{
+                    Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -64,32 +104,7 @@ public class FindAutomatic extends Activity{
             PlacesFetcher place = new PlacesFetcher();
             Toast.makeText(getApplicationContext(), "Mencari pertolongan terdekat...", Toast.LENGTH_SHORT).show();
 
-            //String type = "police";
             place.execute(location);
-
-//            policeButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View view) {
-//                    String type = "police";
-//                    new PlacesFetcher().execute(location, type);
-//                }
-//            });
-//
-//            hospitalButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View view) {
-//                    String type = "hospital";
-//                    new PlacesFetcher().execute(location, type);
-//                }
-//            });
-//
-//            fireStationButton.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View view) {
-//                    String type = "fire_station";
-//                    new PlacesFetcher().execute(location, type);
-//                }
-//            });
 
         }else{
             gps.showSettingsAlert();
@@ -108,7 +123,6 @@ public class FindAutomatic extends Activity{
 
             int radius = 1000;
 
-            String [] types = {"police", "hospital", "fire_station"};
             //LOCATION ON GOOGLE WEB SERVICE IS LAT/LONG, PLEASE NOTICE
             //DO NOT REPEAT THE SAME MISTAKE
 
@@ -117,66 +131,55 @@ public class FindAutomatic extends Activity{
 
             for(int a=0; a<types.length; a++){
 
-            String type = types[a];
+                String type = types[a];
 
-            String urlSearchPlaces ="https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
-                    "location="+lat+","+lng+"&radius="+radius+"&types="+type+"&key="+apiKey;
+                String urlSearchPlaces ="https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
+                        "location="+lat+","+lng+"&radius="+radius+"&types="+type+"&key="+apiKey;
 
-            try {
-                URL urlPlaces = new URL(urlSearchPlaces);
-                HttpURLConnection connection = (HttpURLConnection) urlPlaces.openConnection();
-                InputStream inputStream = connection.getInputStream();
-                BufferedReader readerPlaces = new BufferedReader(new InputStreamReader(inputStream));
-                bufferPlaces = new StringBuffer();
-                String linePlaces = "";
+                try {
+                    URL urlPlaces = new URL(urlSearchPlaces);
+                    HttpURLConnection connection = (HttpURLConnection) urlPlaces.openConnection();
+                    InputStream inputStream = connection.getInputStream();
+                    BufferedReader readerPlaces = new BufferedReader(new InputStreamReader(inputStream));
+                    bufferPlaces = new StringBuffer();
+                    String linePlaces = "";
 
-                while ((linePlaces = readerPlaces.readLine())!=null){
-                    bufferPlaces.append(linePlaces);
+                    while ((linePlaces = readerPlaces.readLine())!=null){
+                        bufferPlaces.append(linePlaces);
+                    }
+
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
 
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                String resultPlaces = bufferPlaces.toString();
+                StringBuffer newBuffer = new StringBuffer();
 
-            String resultPlaces = bufferPlaces.toString();
-            StringBuffer newBuffer = new StringBuffer();
+                try {
+                    JSONObject objectPlaces = new JSONObject(resultPlaces);
+                    JSONArray arrayPlaces = objectPlaces.getJSONArray("results");
 
-            try {
-                JSONObject objectPlaces = new JSONObject(resultPlaces);
-                JSONArray arrayPlaces = objectPlaces.getJSONArray("results");
+                    for(int i=0; i<arrayPlaces.length(); i++){
 
-                for(int i=0; i<arrayPlaces.length(); i++){
+                        JSONObject place = arrayPlaces.getJSONObject(i);
+                        String placeName = place.getString("name");
+                        String placeId = place.getString("place_id");
+                        String placeDetails = getPlaceDetails(placeId);
 
-                    JSONObject place = arrayPlaces.getJSONObject(i);
-                    String placeName = place.getString("name");
-                    String placeId = place.getString("place_id");
-                    String placeDetails = getPlaceDetails(placeId);
+                        newBuffer.append((i+1)+". "+placeName+placeDetails+"\n");
+                    }
 
-                    newBuffer.append((i+1)+". "+placeName+placeDetails+"\n");
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
 
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            resultPlaces = newBuffer.toString();
-            allResult[a] = resultPlaces;
+                resultPlaces = newBuffer.toString();
+                allResult[a] = resultPlaces;
             }
 
             return allResult;
-        }
-
-        @Override
-        protected void onPostExecute(String []sResult) {
-            super.onPostExecute(sResult);
-
-            TextView resultText = (TextView) findViewById(R.id.resultText);
-            for(int b=0; b<sResult.length; b++){
-                resultText.append("Daftar lokasi terdekat:\n"+sResult[b]);
-            }
-            resultText.append("\nDONE!");
         }
 
         private String getPlaceDetails(String placeId){
@@ -215,7 +218,6 @@ public class FindAutomatic extends Activity{
                 String address = (String) objectResult.get("formatted_address");
                 String phone = (String) objectResult.get("international_phone_number");
 
-
                 finalResult.append(": "+address+" "+phone);
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -223,7 +225,14 @@ public class FindAutomatic extends Activity{
 
             return finalResult.toString();
         }
+
+        @Override
+        protected void onPostExecute(String []sResult) {
+            super.onPostExecute(sResult);
+            resultText.setText("\nData sudah difetch. Silahkan pilih menu.");
+            stringFromAsync = sResult;
+        }
     }
 
 
-    }
+}
