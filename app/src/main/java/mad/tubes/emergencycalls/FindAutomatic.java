@@ -4,8 +4,11 @@ import android.app.Activity;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,8 +31,12 @@ public class FindAutomatic extends Activity{
     Button fireStationButton;
     Button hospitalButton;
     TextView resultText;
+    ListView lvHasil;
 
-    String [] stringFromAsync;
+    int radius;
+
+    ArrayAdapter<String> adapter;
+    String [][] stringFromAsync;
     String [] types = {"police", "hospital", "fire_station"};
 
     @Override
@@ -39,10 +46,13 @@ public class FindAutomatic extends Activity{
         setTitle("Mencari...");
         getLocation();
 
+
         policeButton = (Button) findViewById(R.id.policeButton);
         fireStationButton = (Button) findViewById(R.id.fireStationButton);
         hospitalButton = (Button) findViewById(R.id.hospitalButton);
 
+
+        lvHasil = (ListView) findViewById(R.id.listView);
         resultText = (TextView) findViewById(R.id.resultText);
 
         refreshButton = (Button) findViewById(R.id.refreshButton);
@@ -58,7 +68,9 @@ public class FindAutomatic extends Activity{
             @Override
             public void onClick(View view) {
                 if(stringFromAsync!=null){
-                    resultText.setText(stringFromAsync[0]);
+                    adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[0]);
+                    lvHasil.setAdapter(adapter);
+                    resultText.setText("Daftar Kantor Polisi Terdekat dalam radius "+radius+" m");
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
@@ -69,7 +81,9 @@ public class FindAutomatic extends Activity{
             @Override
             public void onClick(View view) {
                 if(stringFromAsync!=null){
-                    resultText.setText(stringFromAsync[1]);
+                    adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[1]);
+                    lvHasil.setAdapter(adapter);
+                    resultText.setText("Daftar Rumah Sakit Terdekat dalam radius "+radius+" m");
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
@@ -80,7 +94,9 @@ public class FindAutomatic extends Activity{
             @Override
             public void onClick(View view) {
                 if(stringFromAsync!=null){
-                    resultText.setText(stringFromAsync[2]);
+                    adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[2]);
+                    lvHasil.setAdapter(adapter);
+                    resultText.setText("Daftar Kantor Pemadam Kebakaran Terdekat dalam radius "+radius+" m");
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
@@ -111,9 +127,9 @@ public class FindAutomatic extends Activity{
         }
     }
 
-    private class PlacesFetcher extends AsyncTask<Location, Integer, String[]> {
+    private class PlacesFetcher extends AsyncTask<Location, Integer, String[][]> {
         @Override
-        protected String[] doInBackground(Location... params) {
+        protected String[][] doInBackground(Location... params) {
             StringBuffer bufferPlaces = null;
             Location location = (Location) params[0];
             double lat = location.getLatitude();
@@ -121,13 +137,13 @@ public class FindAutomatic extends Activity{
 
             String apiKey = "AIzaSyDhoQvCmrgH-tkN0LNbiQZqPs-zoZzz1hM";
 
-            int radius = 1000;
+            radius = 1500;
 
             //LOCATION ON GOOGLE WEB SERVICE IS LAT/LONG, PLEASE NOTICE
             //DO NOT REPEAT THE SAME MISTAKE
 
-            String[] allResult=new String[types.length];
-
+            String[][] allResult= new String[types.length][];
+            String [] tempResult = null;
 
             for(int a=0; a<types.length; a++){
 
@@ -154,12 +170,14 @@ public class FindAutomatic extends Activity{
                     e.printStackTrace();
                 }
 
+
                 String resultPlaces = bufferPlaces.toString();
-                StringBuffer newBuffer = new StringBuffer();
 
                 try {
                     JSONObject objectPlaces = new JSONObject(resultPlaces);
                     JSONArray arrayPlaces = objectPlaces.getJSONArray("results");
+
+                    tempResult = new String[arrayPlaces.length()];
 
                     for(int i=0; i<arrayPlaces.length(); i++){
 
@@ -168,15 +186,14 @@ public class FindAutomatic extends Activity{
                         String placeId = place.getString("place_id");
                         String placeDetails = getPlaceDetails(placeId);
 
-                        newBuffer.append((i+1)+". "+placeName+placeDetails+"\n");
+                        tempResult[i] = (i+1)+". "+placeName+"\n"+placeDetails;
                     }
 
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
 
-                resultPlaces = newBuffer.toString();
-                allResult[a] = resultPlaces;
+                allResult[a] =tempResult;
             }
 
             return allResult;
@@ -218,7 +235,14 @@ public class FindAutomatic extends Activity{
                 String address = (String) objectResult.get("formatted_address");
                 String phone = (String) objectResult.get("international_phone_number");
 
-                finalResult.append(": "+address+" "+phone);
+//                if(address==""){
+//                    address ="Data alamat tidak tersedia.";
+//                }
+//                if(phone==""){
+//                    phone ="Data nomor telepon tidak tersedia.";
+//                }
+
+                finalResult.append(address+" "+phone);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -227,7 +251,7 @@ public class FindAutomatic extends Activity{
         }
 
         @Override
-        protected void onPostExecute(String []sResult) {
+        protected void onPostExecute(String [][]sResult) {
             super.onPostExecute(sResult);
             resultText.setText("\nData sudah difetch. Silahkan pilih menu.");
             stringFromAsync = sResult;
