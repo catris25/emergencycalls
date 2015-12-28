@@ -64,8 +64,8 @@ public class FindAutomatic extends Activity{
             PlacesFetcher place = new PlacesFetcher();
             Toast.makeText(getApplicationContext(), "Mencari pertolongan terdekat...", Toast.LENGTH_SHORT).show();
 
-            String type = "police";
-            place.execute(location, type);
+            //String type = "police";
+            place.execute(location);
 
 //            policeButton.setOnClickListener(new View.OnClickListener() {
 //                @Override
@@ -96,12 +96,11 @@ public class FindAutomatic extends Activity{
         }
     }
 
-    private class PlacesFetcher extends AsyncTask<Object, Integer, String> {
+    private class PlacesFetcher extends AsyncTask<Location, Integer, String[]> {
         @Override
-        protected String doInBackground(Object... params) {
+        protected String[] doInBackground(Location... params) {
             StringBuffer bufferPlaces = null;
             Location location = (Location) params[0];
-            String type = (String) params[1];
             double lat = location.getLatitude();
             double lng = location.getLongitude();
 
@@ -118,7 +117,7 @@ public class FindAutomatic extends Activity{
 
             for(int a=0; a<types.length; a++){
 
-            type = types[a];
+            String type = types[a];
 
             String urlSearchPlaces ="https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
                     "location="+lat+","+lng+"&radius="+radius+"&types="+type+"&key="+apiKey;
@@ -166,18 +165,18 @@ public class FindAutomatic extends Activity{
             allResult[a] = resultPlaces;
             }
 
-            return allResult[1];
+            return allResult;
         }
 
         @Override
-        protected void onPostExecute(String sResult) {
+        protected void onPostExecute(String []sResult) {
             super.onPostExecute(sResult);
 
             TextView resultText = (TextView) findViewById(R.id.resultText);
-//            for(int b=0; b<sResult.length; b++){
-//                resultText.setText("Daftar lokasi terdekat:\n"+sResult[b]);
-//            }
-            resultText.setText("Daftar lokasi terdekat:\n"+sResult);
+            for(int b=0; b<sResult.length; b++){
+                resultText.append("Daftar lokasi terdekat:\n"+sResult[b]);
+            }
+            resultText.append("\nDONE!");
         }
 
         private String getPlaceDetails(String placeId){
