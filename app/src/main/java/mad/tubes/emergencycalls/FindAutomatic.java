@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -23,6 +24,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class FindAutomatic extends Activity{
     TextView locationText;
@@ -37,7 +40,10 @@ public class FindAutomatic extends Activity{
 
     ArrayAdapter<String> adapter;
     String [][] stringFromAsync;
+
     String [] types = {"police", "hospital", "fire_station"};
+
+    String [][] phoneFromAsync = new String [types.length][60];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +76,21 @@ public class FindAutomatic extends Activity{
                 if(stringFromAsync!=null){
                     adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[0]);
                     lvHasil.setAdapter(adapter);
-                    resultText.setText("Daftar Kantor Polisi Terdekat dalam radius "+radius+" m");
+                    resultText.setText("Daftar Kantor Polisi Terdekat dalam radius " + radius + " m");
+
+                    lvHasil.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                            String itemPhone = "Maaf, data nomor telepon tidak tersedia.";
+
+                            if(phoneFromAsync[0][i]!=null){
+                                itemPhone = phoneFromAsync[0][i];
+                            }
+
+                            Toast.makeText(getApplicationContext(), itemPhone, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
@@ -81,9 +101,23 @@ public class FindAutomatic extends Activity{
             @Override
             public void onClick(View view) {
                 if(stringFromAsync!=null){
-                    adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[1]);
+                    adapter = new ArrayAdapter<String>(FindAutomatic.this, android.R.layout.simple_list_item_1, stringFromAsync[1]);
                     lvHasil.setAdapter(adapter);
-                    resultText.setText("Daftar Rumah Sakit Terdekat dalam radius "+radius+" m");
+                    resultText.setText("Daftar Rumah Sakit Terdekat dalam radius " + radius + " m");
+
+                    lvHasil.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                            String itemPhone = "Maaf, data nomor telepon tidak tersedia.";
+
+                            if (phoneFromAsync[1][i] != null) {
+                                itemPhone = phoneFromAsync[1][i];
+                            }
+
+                            Toast.makeText(getApplicationContext(), itemPhone, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
@@ -96,14 +130,26 @@ public class FindAutomatic extends Activity{
                 if(stringFromAsync!=null){
                     adapter = new ArrayAdapter<String>(FindAutomatic.this,android.R.layout.simple_list_item_1, stringFromAsync[2]);
                     lvHasil.setAdapter(adapter);
-                    resultText.setText("Daftar Kantor Pemadam Kebakaran Terdekat dalam radius "+radius+" m");
+                    resultText.setText("Daftar Kantor Pemadam Kebakaran Terdekat dalam radius " + radius + " m");
+
+                    lvHasil.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                            String itemPhone = "Maaf, data nomor telepon tidak tersedia.";
+
+                            if (phoneFromAsync[2][i] != null) {
+                                itemPhone = phoneFromAsync[2][i];
+                            }
+
+                            Toast.makeText(getApplicationContext(), itemPhone, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
                 }else{
                     Toast.makeText(getApplicationContext(), "Please wait...", Toast.LENGTH_SHORT).show();
                 }
             }
         });
-
-
 
     }
 
@@ -184,7 +230,10 @@ public class FindAutomatic extends Activity{
                         JSONObject place = arrayPlaces.getJSONObject(i);
                         String placeName = place.getString("name");
                         String placeId = place.getString("place_id");
-                        String placeDetails = getPlaceDetails(placeId);
+
+
+                        String placeDetails = getPlaceDetails(placeId, a,i);
+                        Log.d("ailog", "parameter : "+ a+","+i+" : "+placeDetails);
 
                         tempResult[i] = (i+1)+". "+placeName+"\n"+placeDetails;
                     }
@@ -199,12 +248,15 @@ public class FindAutomatic extends Activity{
             return allResult;
         }
 
-        private String getPlaceDetails(String placeId){
+        private String getPlaceDetails(String placeId, int param1, int param2){
+
+            int a = param1;
+            int i = param2;
+
             StringBuffer bufferDetails = null;
             String id = placeId;
             String apiKey = "AIzaSyDhoQvCmrgH-tkN0LNbiQZqPs-zoZzz1hM";
             String urlSearchDetails="https://maps.googleapis.com/maps/api/place/details/json?placeid="+id+"&key="+apiKey;;
-
 
             try {
                 URL urlDetails = new URL(urlSearchDetails);
@@ -235,14 +287,10 @@ public class FindAutomatic extends Activity{
                 String address = (String) objectResult.get("formatted_address");
                 String phone = (String) objectResult.get("international_phone_number");
 
-//                if(address==""){
-//                    address ="Data alamat tidak tersedia.";
-//                }
-//                if(phone==""){
-//                    phone ="Data nomor telepon tidak tersedia.";
-//                }
+                Log.d("phone", "phone number : "+phone);
+                phoneFromAsync[a][i] = phone;
 
-                finalResult.append(address+" "+phone);
+                finalResult.append(address + " " + phone);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
